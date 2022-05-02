@@ -1,0 +1,98 @@
+---
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Mulitple account management
+
+Parameters:
+  ManagementAccountID:
+    Type: String
+    Description: Account ID of management account
+
+Conditions:
+  IAMRegion: !Equals [ !Ref 'AWS::Region', 'us-west-2' ]
+
+Resources:
+
+  ######################
+  # Containment policy #
+  ######################
+
+  ContainmentPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IAMRegion
+    Properties:
+      Path: '/dso/'
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Deny
+            Action:
+              - iam:Detach*
+            Resource: '*'
+            Condition:
+              ArnLike:
+                iam:PolicyArn: !Sub 'arn:aws:iam::${AWS::AccountId}:policy/dso/*'
+          -
+            Effect: Deny
+            Action:
+              - iam:DeletePolicy
+              - iam:DeletePolicyVersion
+              - iam:SetDefaultPolicyVersion
+            Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:policy/dso/*'
+          -
+            Effect: Deny
+            Action:
+              - sts:AssumeRole
+              - iam:PassRole
+              - iam:DeleteRole
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
+              - iam:AttachRolePolicy
+              - iam:DetachRolePolicy
+              - iam:UpdateAssumeRolePolicy
+            Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/dso/*'
+
+
+  ############################
+  # Roles for administration #
+  ############################
+
+  ReadOnlyRole:
+    Type: AWS::IAM::Role
+    Condition: IAMRegion
+    Properties:
+      RoleName: ReadOnly
+      Path: '/dso/'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+        - !Ref ContainmentPolicy
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${ManagementAccountID}:root'
+            Action:
+              - sts:AssumeRole
+
+  SecurityAuditRole:
+    Type: AWS::IAM::Role
+    Condition: IAMRegion
+    Properties:
+      RoleName: SecurityAudit
+      Path: '/dso/'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecurityAudit
+        - !Ref ContainmentPolicy
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${ManagementAccountID}:root'
+            Action:
+              - sts:AssumeRole
