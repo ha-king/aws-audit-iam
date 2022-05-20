@@ -116,3 +116,22 @@ Resources:
               AWS: !Sub 'arn:aws:iam::${ManagementAccountID}:root'
             Action:
               - sts:AssumeRole
+
+  AdminRole:
+    Type: AWS::IAM::Role
+    Condition: IAMRegion
+    Properties:
+      RoleName: AdminRole
+      Path: '/dso/'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+        - !Ref ContainmentPolicy
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${ManagementAccountID}:root'
+            Action:
+              - sts:AssumeRole
